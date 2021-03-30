@@ -89,7 +89,6 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    --role-name AmazonEKS_EBS_CSI_DriverRole \
    --assume-role-policy-document file://"trust-policy.json"
    ```
-   </br>
 3. Attach the IAM policy to the role. </br>
    Replace <AWS_ACCOUNT_ID> (including <>) with your account ID.</br>
    ```shell
@@ -158,7 +157,21 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    kubectl apply -f operator.yaml
    ```
 
-3. Deploy the initial cluster </br>
+3. Installation of ```vtctlclient``` locally
+   Download the file and ```untar``` it.
+   ```
+   wget https://github.com/vitessio/vitess/releases/download/v9.0.0/vitess-9.0.0-daa6085.tar.gz
+   ```
+   Create a softlink for the ```vtctlclient```
+   ```
+   ln -s vitess-9.0.0-daa608/bin/vtctlclient /usr/local/bin/vtctlclient
+   ```
+   And make sure the executable is working as expected:
+   ```shell
+   vtctlclient
+   E0330 15:55:13.723108   45320 main.go:57] please specify -server <vtctld_host:vtctld_port> to specify the vtctld server to connect to
+   ```
+4. Deploy the initial cluster </br>
    Edit 101_initial_cluster.yaml for a desired topology. Example below shows a vitess cluster with 3 shards and each shard has 3 replicas including master.
    ```yaml
    # The following example is minimalist. The security policies
@@ -352,7 +365,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    ```shell
    kubectl apply -f 101_initial_cluster.yaml
    ```
-4. Verify the cluster is up and running.
+5. Verify the cluster is up and running.
    ```
    kubectl get pods
    NAME                                               READY   STATUS    RESTARTS   AGE
@@ -380,7 +393,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    alias vtctlclient="vtctlclient -server=localhost:15999"
    alias mysql="mysql -h 127.0.0.1 -P 15306 -u user"
    ```
-2. Set specified in the ```101_initial_cluster.yaml```, a keyspace(database) ```commerce``` will be created.
+2. As specified in the ```101_initial_cluster.yaml```, a keyspace(database) ```commerce``` will be created.
    ```sql
    [ec2-user@ip-192-168-85-148 ycsb-0.17.0]$ mysql
    Handling connection for 15306
@@ -473,4 +486,38 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    +----------+--------------+------+-----+---------+-------+
    11 rows in set (0.03 sec)
    ```
-### Load Data from YCSB
+### Installation of YCSB
+1. Java is a prerequisite and must be installed.
+   ```shell
+   sudo yum install java -y
+   ```
+2. Download the latest YCSB.
+   ```shell
+   curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
+   tar xfvz ycsb-0.17.0.tar.gz
+   cd ycsb-0.17.0
+   ```
+3. Since there is no MySQL binding, we will use JDBC instead.</br>
+   Download the MySQL JDBC connector and move it to ```lib``` directory:
+   ```shell
+   wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.23.tar.gz
+   tar xzvf mysql-connector-java-8.0.23.tar.gz
+   mv mysql-connector-java-8.0.23/mysql-connector-java-8.0.23.jar ./ycsb-0.17.0/jdbc-binding/lib
+   ```
+4. Change the database configuration for JDBC.
+   ```shell
+   cd ycsb-0.17.0/jdbc-binding/conf
+   vi db.properties
+
+   db.driver=com.mysql.jdbc.Driver
+   db.url=jdbc:mysql://127.0.0.1:15306/commerce
+   db.user=user
+   db.passwd=
+   ```   
+
+5. Prepare the data loading.</br>
+   ```shell
+   ./bin/ycsb load jdbc -P ./jdbc-binding/conf/db.properties -P workloads/workloada -p recordcount=90000000 -p threadcount=200 -s 2> load_data_90M.log
+   ```
+   The standard workload parameter files create very small databases; for example, workloada creates only 1,000 records. This is useful while debugging your setup. However, to run an actual benchmark you'll want to generate a much larger database. For example, imagine you want to load 150 million records. You need to specify a new value of the ```recordcount``` property on the command line.</br>
+   The ```-s``` parameter will require the Client to produce status report on stderr. ```2> load_data_90M.log``` will output the stderr to the log file.
