@@ -486,3 +486,12 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    +----------+--------------+------+-----+---------+-------+
    11 rows in set (0.03 sec)
    ```
+5. Create a dedicated loadbalancer for Vitess MySQL service.
+   ```shell
+   kubectl expose deployment $( kubectl get deployment --selector="planetscale.com/component=vtgate" -o=jsonpath="{.items..metadata.name}" ) --type=LoadBalancer --name=test-vtgate --port 3306 --target-port 3306
+   
+   kubectl get service test-vtgate
+
+   NAME          TYPE           CLUSTER-IP      EXTERNAL-IP                                                                   PORT(S)          AGE
+   test-vtgate   LoadBalancer   10.100.238.40   a7e70567f99354f5885968987fe62e6c-478783606.ap-southeast-1.elb.amazonaws.com   3306:30717/TCP   7m
+   ```

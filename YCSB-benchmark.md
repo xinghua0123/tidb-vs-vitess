@@ -24,7 +24,7 @@
    vi db.properties
 
    db.driver=com.mysql.jdbc.Driver
-   db.url=jdbc:mysql://127.0.0.1:15306/commerce
+   db.url=jdbc:mysql://<AWS-LB-DNS>:3306/commerce # For TiDB, use port 4000 instead, and respective database name
    db.user=user
    db.passwd=
    ```   
