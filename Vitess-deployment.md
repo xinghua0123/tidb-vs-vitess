@@ -52,7 +52,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    aws iam create-policy --policy-name AmazonEKS_EBS_CSI_Driver_Policy \
    --policy-document file://example-iam-policy.json
    ```
-#### Create an IAM role and attach the IAM </br>
+#### Create an IAM role and attach the IAM policy</br>
 1. View your cluster's OIDC provider URL. Replace <cluster_name> (including <>) with your cluster name.
    ```shell
    aws eks describe-cluster --name <cluster_name> --query "cluster.identity.oidc.issuer" --output text
@@ -82,9 +82,41 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
         ]
       }
    ```
+   </br>
    Create the role. You can change ```AmazonEKS_EBS_CSI_DriverRole``` to a different name, but please remain consistent for the rest of the steps.</br>
    ```shell
    aws iam create-role \
    --role-name AmazonEKS_EBS_CSI_DriverRole \
    --assume-role-policy-document file://"trust-policy.json"
    ```
+   </br>
+3. Attach the IAM policy to the role. </br>
+   Replace <AWS_ACCOUNT_ID> (including <>) with your account ID.</br>
+   ```shell
+   aws iam attach-role-policy \
+   --policy-arn arn:aws:iam::<AWS_ACCOUNT_ID>:policy/AmazonEKS_EBS_CSI_Driver_Policy \
+   --role-name AmazonEKS_EBS_CSI_DriverRole
+   ```
+#### Deploy the driver
+   ```shell
+   kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
+   ```
+   </br>
+   Annotate the ebs-csi-controller-sa Kubernetes service account with the ARN of the IAM role that you created previously. Replace the <AWS_ACCOUNT_ID> (including <>) with your account ID. </br>
+   ```
+   kubectl annotate serviceaccount ebs-csi-controller-sa \
+   -n kube-system \
+   eks.amazonaws.com/role-arn=arn:aws:iam::<AWS_ACCOUNT_ID>:role/AmazonEKS_EBS_CSI_DriverRole
+   ```
+   </br>
+   Delete the driver pods. They're automatically redeployed with the IAM permissions from the IAM policy assigned to the role. </br>
+   ```shell
+   kubectl delete pods \
+   -n kube-system \
+   -l=app=ebs-csi-controller
+   ```
+
+
+
+
+
