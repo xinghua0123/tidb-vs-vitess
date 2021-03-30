@@ -213,6 +213,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    ```shell
    kubectl create namespace tidb-cluster && \
    kubectl -n tidb-cluster apply -f https://raw.githubusercontent.com/pingcap/tidb-operator/master/examples/basic/tidb-cluster.yaml
+   ```
    Feel free to edit the TiDB Cluster CR yaml:
    ```yaml
     apiVersion: pingcap.com/v1alpha1
@@ -364,8 +365,20 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
     storage: 50Gi
    ```
 3. Verify the cluster is up and running.
-   ```
-   
+   ```shell
+    kubectl get pods -n tidb-cluster
+    NAME                                    READY   STATUS    RESTARTS   AGE
+    tidb-monitor-monitor-777c9675b7-d2dj5   3/3     Running   0          19h
+    tidb-test-discovery-6c45f88cbd-hhnt2    1/1     Running   0          19h
+    tidb-test-pd-0                          1/1     Running   0          19h
+    tidb-test-tidb-0                        2/2     Running   0          19h
+    tidb-test-tidb-1                        2/2     Running   0          19h
+    tidb-test-tidb-2                        2/2     Running   0          19h
+    tidb-test-tikv-0                        1/1     Running   0          19h
+    tidb-test-tikv-1                        1/1     Running   0          19h
+    tidb-test-tikv-2                        1/1     Running   0          19h
+    tidb-test-tikv-3                        1/1     Running   0          19h
+    tidb-test-tikv-4                        1/1     Running   0          19h
    ```
 ### Create Database and Shards for YCSB
 
