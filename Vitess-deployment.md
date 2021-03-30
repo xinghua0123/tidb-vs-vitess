@@ -521,9 +521,9 @@ This would generate plenty of workloads but only of inserts. This does not simul
    ```shell
    ./bin/ycsb load jdbc -P ./jdbc-binding/conf/db.properties -P workloads/workloada -p recordcount=90000000 -p threadcount=200 -s 2> load_data_90M.log
    ```
-   The standard workload parameter files create very small databases; for example, workloada creates only 1,000 records. This is useful while debugging your setup. However, to run an actual benchmark you'll want to generate a much larger database. For example, imagine you want to load 90 million records. You need to specify a new value of the ```recordcount``` property on the command line.</br>
-   ```threadcount``` are the number of running threads. Think of it as the number of connecting clients.</br>
-   The ```-s``` parameter will require the Client to produce status report on stderr. ```2> load_data_90M.log``` will output the stderr to the log file.
+   The standard workload parameter files create very small databases; for example, workloada creates only 1,000 records. This is useful while debugging your setup. However, to run an actual benchmark you'll want to generate a much larger database. For example, imagine you want to load 90 million records. You need to specify a new value of the ```recordcount``` property on the command line.</br></br>
+   ```threadcount``` is the number of running threads. Think of it as the number of connecting clients.</br></br>
+   The ```-s``` parameter will require the Client to produce status report on stderr. ```2> load_data_90M.log``` will output the stderr to the log file.</br>
 
 2. When the load completes, the Client will report statistics about the performance of the load. 
    ```shell
@@ -562,3 +562,10 @@ This would generate plenty of workloads but only of inserts. This does not simul
    +-----------------+
    1 row in set (8.46 sec)
    ```
+### Running Workloads of YCSB
+1. This would generate tons of inserts/update/deletes simulate real-life workload:
+   ```shell
+   ./bin/ycsb run jdbc -P ./jdbc-binding/conf/db.properties -P workloads/workloada -p operationcount=30000000 -p threadcount=20 -s 2> run_thread_20.log
+   ```
+   ```operationcount``` is the total number of operations including inserts, updates and deletes in each run.</br></br>
+   ```threadcount``` is the number of running threads. Think of it as the number of connecting clients.</br></br>
