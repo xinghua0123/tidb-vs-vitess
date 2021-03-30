@@ -1,7 +1,5 @@
 # Vitess Deployment on EKS
 
-## Preparation
-
 ### Deploy an EKS Cluster
 1. Install ```eksctl``` – A command line tool for working with EKS clusters that automates many individual tasks. Taking macOS as an example:
    ```shell
@@ -121,7 +119,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    -l=app=ebs-csi-controller
    ```
 #### Deploy gp3 storageclass
-1. Prepare the storagleclass YAML file.
+1. Prepare the storagleclass YAML ```gp3.yaml```file.
    ```yaml
    kind: StorageClass
    apiVersion: storage.k8s.io/v1
@@ -135,8 +133,31 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    csi.storage.k8s.io/fstype: xfs # must be xfs
    type: gp3
    iops: "10000" # up to 16000
-   throughput: "500" # up to 1000
+   throughput: "500" # up to 1000 MB/s
    ```
+2. Unset current storageclass gp2 as default
+   ```shell
+   kubectl patch storageclass gp2 -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+   ``` 
+3. Deploy gp3 storageclass
+   ```
+   kubectl apply -f gp3.yaml
+   ```
+### Deploy Vitess Cluster on EKS
+
+#### Deploy Vitess Operator
+1. Change to the operator example directory
+   ```shell
+   git clone git@github.com:vitessio/vitess.git
+   cd vitess/examples/operator
+   ```
+
+2. Install the operator
+   ```shell
+   kubectl apply -f operator.yaml
+   ```
+
+3. Deploy the initial cluster
 
 
 
