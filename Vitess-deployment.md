@@ -83,6 +83,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
       }
    ```
    </br>
+
    Create the role. You can change```AmazonEKS_EBS_CSI_DriverRole```to a different name, but please remain consistent for the rest of the steps.</br>
    
    ```shell
@@ -99,11 +100,11 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    --role-name AmazonEKS_EBS_CSI_DriverRole
    ```
 #### Deploy the driver
+1. Deploy the driver.
    ```shell
    kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
    ```
-   </br>
-   Annotate the ebs-csi-controller-sa Kubernetes service account with the ARN of the IAM role that you created previously. Replace the <AWS_ACCOUNT_ID> (including <>) with your account ID. </br>
+2. Annotate the ebs-csi-controller-sa Kubernetes service account with the ARN of the IAM role that you created previously. Replace the <AWS_ACCOUNT_ID> (including <>) with your account ID. </br>
    
    ```
    kubectl annotate serviceaccount ebs-csi-controller-sa \
@@ -112,14 +113,30 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    ```
    </br>
    
-   Delete the driver pods. They're automatically redeployed with the IAM permissions from the IAM policy assigned to the role. </br>
+3. Delete the driver pods. They're automatically redeployed with the IAM permissions from the IAM policy assigned to the role. </br>
    
    ```shell
    kubectl delete pods \
    -n kube-system \
    -l=app=ebs-csi-controller
    ```
-
+#### Deploy gp3 storageclass
+1. Prepare the storagleclass YAML file.
+   ```yaml
+   kind: StorageClass
+   apiVersion: storage.k8s.io/v1
+   metadata:
+   name: gp3
+   annotations:
+      storageclass.kubernetes.io/is-default-class: "true"
+   provisioner: ebs.csi.aws.com
+   volumeBindingMode: WaitForFirstConsumer
+   parameters:
+   csi.storage.k8s.io/fstype: xfs # must be xfs
+   type: gp3
+   iops: "10000" # up to 16000
+   throughput: "500" # up to 1000
+   ```
 
 
 
