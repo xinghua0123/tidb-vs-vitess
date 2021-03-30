@@ -1,7 +1,8 @@
 # Vitess Deployment on EKS
 
-## Prepare an EKS Cluster
+## Preparation
 
+### Deploy an EKS Cluster
 1. Install ```eksctl``` – A command line tool for working with EKS clusters that automates many individual tasks. Taking macOS as an example:
    ```shell
    brew install weaveworks/tap/eksctl
@@ -32,4 +33,22 @@
    ```
    Wait for the deployment of EKS cluster completes.
 
-4. 
+### Deploy EBS CSI Driver and set up EBS gp3 storageclass
+
+#### Set up driver permission </br>
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. Using secret object - create an IAM user with proper permission, put that user's credentials in secret manifest then deploy the secret.
+   ```shell
+   curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/secret.yaml > secret.yaml
+   # Edit the secret with user credentials
+   kubectl apply -f secret.yaml
+   ```
+#### Create IAM Policy </br>
+1. Download the IAM policy document from GitHub.
+   ```shell
+   curl -o example-iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/v0.9.0/docs/example-iam-policy.json
+   ```
+2. Create the policy. You can change ```AmazonEKS_EBS_CSI_Driver_Policy``` to a different name, but please remain consistent for the rest of the steps. And make sure ```aws``` client is installed.
+   ```shell
+   aws iam create-policy --policy-name AmazonEKS_EBS_CSI_Driver_Policy \
+   --policy-document file://example-iam-policy.json
+   ```
