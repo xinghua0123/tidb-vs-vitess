@@ -82,4 +82,9 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
         ]
       }
    ```
-   Create the role. You can change ```AmazonEKS_EBS_CSI_DriverRole``` to a different name, but please remain consistent for the rest of the steps.
+   Create the role. You can change ```AmazonEKS_EBS_CSI_DriverRole``` to a different name, but please remain consistent for the rest of the steps.</br>
+   ```shell
+   aws iam create-role \
+   --role-name AmazonEKS_EBS_CSI_DriverRole \
+   --assume-role-policy-document file://"trust-policy.json"
+   ```
