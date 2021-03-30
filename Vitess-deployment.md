@@ -52,3 +52,34 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    aws iam create-policy --policy-name AmazonEKS_EBS_CSI_Driver_Policy \
    --policy-document file://example-iam-policy.json
    ```
+#### Create an IAM role and attach the IAM </br>
+1. View your cluster's OIDC provider URL. Replace <cluster_name> (including <>) with your cluster name.
+   ```shell
+   aws eks describe-cluster --name <cluster_name> --query "cluster.identity.oidc.issuer" --output text
+   ```
+   Output:
+   ```
+   https://oidc.eks.ap-southeast-1.amazonaws.com/id/C6DXXXXXXXXXXXXXXX60CC266F1078C
+   ```
+2. Create IAM role </br>
+   Copy the following contents to a file named trust-policy.json. Replace <AWS_ACCOUNT_ID> (including <>) with your account ID and <XXXXXXXXXX45D83924220DC4815XXXXX> with the value returned in the previous step.
+   ```json
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/<XXXXXXXXXX45D83924220DC4815XXXXX>"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+              "StringEquals": {
+                "oidc.eks.us-west-2.amazonaws.com/id/<XXXXXXXXXX45D83924220DC4815XXXXX>:sub": "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+              }
+            }
+          }
+        ]
+      }
+   ```
+   Create the role. You can change ```AmazonEKS_EBS_CSI_DriverRole``` to a different name, but please remain consistent for the rest of the steps.
