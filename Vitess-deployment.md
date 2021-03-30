@@ -1,6 +1,6 @@
 # Vitess Deployment on EKS
 
-### Deploy an EKS Cluster
+## Deploy an EKS Cluster
 1. Install ```eksctl``` – A command line tool for working with EKS clusters that automates many individual tasks. Taking macOS as an example:
    ```shell
    brew install weaveworks/tap/eksctl
@@ -31,16 +31,16 @@
    ```
    Wait for the deployment of EKS cluster completes.
 
-### Deploy EBS CSI Driver and set up EBS gp3 storageclass
+## Deploy EBS CSI Driver and set up EBS gp3 storageclass
 
-#### Set up driver permission </br>
+### Set up driver permission </br>
 The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. Using secret object - create an IAM user with proper permission, put that user's credentials in secret manifest then deploy the secret.
    ```shell
    curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/secret.yaml > secret.yaml
    # Edit the secret with user credentials
    kubectl apply -f secret.yaml
    ```
-#### Create IAM Policy </br>
+### Create IAM Policy </br>
 1. Download the IAM policy document from GitHub.
    ```shell
    curl -o example-iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/v0.9.0/docs/example-iam-policy.json
@@ -50,7 +50,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    aws iam create-policy --policy-name AmazonEKS_EBS_CSI_Driver_Policy \
    --policy-document file://example-iam-policy.json
    ```
-#### Create an IAM role and attach the IAM policy</br>
+### Create an IAM role and attach the IAM policy</br>
 1. View your cluster's OIDC provider URL. Replace <cluster_name> (including <>) with your cluster name.
    ```shell
    aws eks describe-cluster --name <cluster_name> --query "cluster.identity.oidc.issuer" --output text
@@ -97,7 +97,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    --policy-arn arn:aws:iam::<AWS_ACCOUNT_ID>:policy/AmazonEKS_EBS_CSI_Driver_Policy \
    --role-name AmazonEKS_EBS_CSI_DriverRole
    ```
-#### Deploy the driver
+### Deploy the driver
 1. Deploy the driver.
    ```shell
    kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
@@ -118,7 +118,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    -n kube-system \
    -l=app=ebs-csi-controller
    ```
-#### Deploy gp3 storageclass
+### Deploy gp3 storageclass
 1. Prepare the storagleclass YAML ```gp3.yaml```file.
    ```yaml
    kind: StorageClass
@@ -143,9 +143,9 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    ```
    kubectl apply -f gp3.yaml
    ```
-### Deploy Vitess Cluster on EKS
+## Deploy Vitess Cluster on EKS
 
-#### Deploy Vitess Operator
+### Deploy Vitess Operator
 1. Change to the operator example directory
    ```shell
    git clone git@github.com:vitessio/vitess.git
