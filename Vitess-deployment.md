@@ -137,6 +137,13 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    ```
    kubectl apply -f gp3.yaml
    ```
+3. Verify that new storageclass is successfully created.
+   ```
+   kubectl get sc
+   NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+   gp2 (default)   kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  28h
+   gp3             ebs.csi.aws.com         Delete          WaitForFirstConsumer   false                  24h
+   ```
 ## Deploy Vitess Cluster on EKS
 
 ### Deploy Vitess Operator and Cluster
@@ -199,7 +206,7 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
          cpu: 100m
          memory: 128Mi
    keyspaces:
-   - name: commerce
+   - name: commerce # a keyspace(database) named commerce will be created
       turndownPolicy: Immediate
       partitionings:
       - equal:
@@ -345,9 +352,125 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
    ```shell
    kubectl apply -f 101_initial_cluster.yaml
    ```
-
+4. Verify the cluster is up and running.
+   ```
+   kubectl get pods
+   NAME                                               READY   STATUS    RESTARTS   AGE
+   my-vitess-etcd-40b4cbc2-1                          1/1     Running   0          36m
+   my-vitess-etcd-40b4cbc2-2                          1/1     Running   0          36m
+   my-vitess-etcd-40b4cbc2-3                          1/1     Running   0          36m
+   my-vitess-vttablet-zone1-0069280532-3b978d46       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-0406690258-39fb446b       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-0598971861-9dc5be68       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-1124725830-145759d8       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-1320336861-1b8e7787       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-2070837339-62bca317       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-2195186634-51d48922       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-3157751654-76a5f21a       3/3     Running   1          36m
+   my-vitess-vttablet-zone1-4067224458-48d0dcdc       3/3     Running   1          36m
+   my-vitess-zone1-vtctld-63f67451-7975b46f9d-xnz88   1/1     Running   2          36m
+   my-vitess-zone1-vtgate-0ca8a771-548dc45d54-f7q57   1/1     Running   2          36m
+   vitess-operator-9874b4ff-9tpbl                     1/1     Running   0          24h
+   ```
 ### Create Vitess Database and Shards for YCSB
+1. Setup Port-forward
+   For ease-of-use, Vitess provides a script to port-forward from Kubernetes to your local machine. This script also recommends setting up aliases for ```mysql``` and ```vtctlclient```:
+   ```
+   ./pf.sh &
+   alias vtctlclient="vtctlclient -server=localhost:15999"
+   alias mysql="mysql -h 127.0.0.1 -P 15306 -u user"
+   ```
+2. Set specified in the ```101_initial_cluster.yaml```, a keyspace(database) ```commerce``` will be created.
+   ```sql
+   [ec2-user@ip-192-168-85-148 ycsb-0.17.0]$ mysql
+   Handling connection for 15306
+   Welcome to the MariaDB monitor.  Commands end with ; or \g.
+   Your MySQL connection id is 375
+   Server version: 5.7.9-vitess-10.0.0-SNAPSHOT Version: 10.0.0-SNAPSHOT (Git revision 92fd95324 branch 'master') built on Tue Mar 30 02:32:03 UTC 2021 by vitess@d9474db7708a using go1.15.6 linux/amd64
 
+   Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
 
+   Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
+   MySQL [(none)]> show databases;
+   +--------------------+
+   | Database           |
+   +--------------------+
+   | information_schema |
+   | mysql              |
+   | sys                |
+   | performance_schema |
+   | commerce           |
+   +--------------------+
+   5 rows in set (0.00 sec)
+   ```
+3. Create YCSB schemas
+   ```usertable```table structure as defined in ```create_commerce_schema.sql```:
+   ```sql
+   create table usertable(
+   YCSB_KEY varchar(64)  NOT NULL,
+   FIELD0 varchar(100)  ,
+   FIELD1 varchar(100)  ,
+   FIELD2 varchar(100)  ,
+   FIELD3 varchar(100)  ,
+   FIELD4 varchar(100)  ,
+   FIELD5 varchar(100)  ,
+   FIELD6 varchar(100)  ,
+   FIELD7 varchar(100)  ,
+   FIELD8 varchar(100)  ,
+   FIELD9 varchar(100)  ,
+   primary key(YCSB_KEY)
+   ) ENGINE=InnoDB;
+   ```
+   And table shards as defined in ```vschema_commerce_sharded.json```:
+   ```json
+   {
+      "sharded": true,
+      "vindexes": {
+         "binary_md5": {
+               "type": "binary_md5"
+         }
+      },
+      "tables": {
+         "usertable": {
+               "column_vindexes": [
+                  {
+                     "column": "YCSB_KEY",
+                     "name": "binary_md5"
+                  }
+               ]
+         }
+      }
+   }
+   ```
+   Load initial schemas:
+   ```shell
+   vtctlclient ApplySchema -sql="$(cat create_commerce_schema.sql)" commerce
+   vtctlclient ApplyVSchema -vschema="$(cat vschema_commerce_sharded.json)" commerce
+   ```
+4. At this point, you should be able to see the table schema in MySQL
+   ```sql
+   MySQL [(none)]> use commerce
+   Reading table information for completion of table and column names
+   You can turn off this feature to get a quicker startup with -A
 
+   Database changed
+   MySQL [commerce]> desc usertable;
+   +----------+--------------+------+-----+---------+-------+
+   | Field    | Type         | Null | Key | Default | Extra |
+   +----------+--------------+------+-----+---------+-------+
+   | YCSB_KEY | varchar(64)  | NO   | PRI | NULL    |       |
+   | FIELD0   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD1   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD2   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD3   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD4   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD5   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD6   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD7   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD8   | varchar(100) | YES  |     | NULL    |       |
+   | FIELD9   | varchar(100) | YES  |     | NULL    |       |
+   +----------+--------------+------+-----+---------+-------+
+   11 rows in set (0.03 sec)
+   ```
+### Load Data from YCSB
