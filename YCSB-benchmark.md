@@ -16,7 +16,7 @@
    ```shell
    wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.23.tar.gz
    tar xzvf mysql-connector-java-8.0.23.tar.gz
-   mv mysql-connector-java-8.0.23/mysql-connector-java-8.0.23.jar ./ycsb-0.17.0/jdbc-binding/lib
+   mv mysql-connector-java-8.0.23/mysql-connector-java-8.0.23.jar jdbc-binding/lib
    ```
 4. Change the database configuration for JDBC.
    ```shell
