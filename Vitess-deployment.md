@@ -99,7 +99,8 @@ The driver requires IAM permission to talk to Amazon EBS to manage the volume on
 ### Deploy the driver
 1. Deploy the driver.
    ```shell
-   kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
+   # Don't use the master branch, use the version 0.9
+   kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.9"
    ```
 2. Annotate the ebs-csi-controller-sa Kubernetes service account with the ARN of the IAM role that you created previously. Replace the <AWS_ACCOUNT_ID> (including <>) with your account ID. </br>
    
